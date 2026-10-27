@@ -10,5 +10,6 @@ set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-.}"
 uenv verbose cuda-11.4.4 cudnn-11.x-8.8.0
 uenv miniconda3-py39
-conda create -n ele680_env -c pytorch -c conda-forge \
-  pytorch numpy pandas pyarrow matplotlib pyyaml pytest -y
+# pytorch-cuda=11.8 (nvidia channel) forces a CUDA build; a bare `pytorch` can resolve to CPU-only.
+conda create -n ele680_env -c pytorch -c nvidia -c conda-forge python=3.11 \
+  pytorch=2.5.1 pytorch-cuda=11.8 numpy pandas pyarrow matplotlib pyyaml pytest -y
