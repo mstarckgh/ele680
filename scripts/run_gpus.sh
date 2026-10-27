@@ -4,7 +4,7 @@
 #   tmux new -s ele680
 #   ./scripts/run_gpus.sh "0 1 2" [seeds] [config-glob]
 # Example: ./scripts/run_gpus.sh "1 4" 5 'configs/main_*.yaml'
-set -euo pipefail
+set -eo pipefail
 cd "$(dirname "$0")/.."
 GPUS=(${1:?usage: run_gpus.sh "0 1 2" [seeds] [glob]})
 SEEDS=${2:-5}

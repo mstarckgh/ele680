@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:0
 #SBATCH --time=00:20:00
 #SBATCH --output=logs/baselines.out
-set -euo pipefail
+set -eo pipefail
 cd "${SLURM_SUBMIT_DIR:-.}"
 mkdir -p results
 uenv verbose cuda-11.4.4 cudnn-11.x-8.8.0

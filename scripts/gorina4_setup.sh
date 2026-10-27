@@ -3,7 +3,7 @@
 #   uenv avail                      # check the names below exist on this server
 #   ./scripts/gorina4_setup.sh
 # P100s (sm_60) need a CUDA 11.x PyTorch build; recent cu12/cu13 wheels may drop sm_60.
-set -euo pipefail
+set -eo pipefail
 uenv verbose cuda-11.4.4 cudnn-11.x-8.8.0
 uenv miniconda3-py39
 # pytorch-cuda=11.8 (nvidia channel) forces a CUDA build; a bare `pytorch` can resolve to CPU-only.

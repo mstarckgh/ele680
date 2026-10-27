@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --time=03:00:00
 #SBATCH --output=logs/%x_%A_%a.out
-set -euo pipefail
+set -eo pipefail
 cd "${SLURM_SUBMIT_DIR:-.}"
 mkdir -p logs results
 CFG=$(ls configs/*.yaml | sort | sed -n "$((SLURM_ARRAY_TASK_ID + 1))p")

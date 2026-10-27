@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:0
 #SBATCH --time=02:15:00
 #SBATCH --output=logs/setup.out
-set -euo pipefail
+set -eo pipefail
 cd "${SLURM_SUBMIT_DIR:-.}"
 uenv verbose cuda-11.4.4 cudnn-11.x-8.8.0
 uenv miniconda3-py39
