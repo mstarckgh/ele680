@@ -1,0 +1,5 @@
+model: lstm
+L: 168
+epochs: 40
+model_kwargs:
+  hidden: 64

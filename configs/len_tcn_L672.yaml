@@ -1,0 +1,6 @@
+model: tcn
+L: 672
+epochs: 40
+model_kwargs:
+  hidden: 38
+  n_blocks: 7

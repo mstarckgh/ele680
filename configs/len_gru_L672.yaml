@@ -1,0 +1,5 @@
+model: gru
+L: 672
+epochs: 40
+model_kwargs:
+  hidden: 72
