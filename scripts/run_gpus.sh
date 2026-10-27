@@ -11,8 +11,8 @@ SEEDS=${2:-5}
 GLOB=${3:-configs/*.yaml}
 mkdir -p logs results
 uenv verbose cuda-11.4.4 cudnn-11.x-8.8.0
-uenv miniconda3-py39
-conda activate ele680_env
+uenv miniconda3-py312
+source .venv/bin/activate
 export OMP_NUM_THREADS=4
 
 CFGS=()
