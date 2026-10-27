@@ -5,6 +5,7 @@ on UCI ElectricityLoadDiagrams20112014 (10 clients, hourly mean, one-shot 24 h f
 
 ## Setup
 ```bash
+# local (cluster: see below)
 uv venv --python 3.12 && source .venv/bin/activate
 uv pip install torch numpy pandas matplotlib pyyaml pyarrow pytest
 ./scripts/download_data.sh          # -> data/raw/LD2011_2014.txt
@@ -24,12 +25,18 @@ Chronological split 70/10/20 from 2012-01-01; z-scoring uses train statistics on
 
 Single run: `python -m src.train --config configs/main_tcn.yaml --seeds 5` → `results/main_tcn.json`.
 
-Slurm (one array task per config, 20 tasks):
+### UiS GPU cluster (follows https://gitlab.ux.uis.no/unix/gpu)
 ```bash
-python -m src.run_baselines                         # seasonal-naive baselines, cheap
-sbatch --array=0-19 scripts/slurm_array.sbatch      # adjust partition/GRES in the script
+ssh $USER@gorina11.ux.uis.no
+cd /bhome/$USER && git clone <this repo> ele680 && cd ele680
+./scripts/download_data.sh                    # on the login node; GPU jobs need files under /bhome
+mkdir -p logs
+sbatch scripts/slurm_setup.sbatch             # conda env, no GPU; wait for it to finish
+sbatch scripts/slurm_baselines.sbatch         # cheap, CPU only
+sbatch --array=0-19 scripts/slurm_array.sbatch   # one task per config; check with squeue
 ```
-Sequential alternative: `scripts/run_all.sh`.
+Check scripts first with `sbatch --test-only <script>`. Adjust `--time` if tasks time out.
+Local/sequential alternative: `scripts/run_all.sh`.
 
 ## Analysis
 `python -m src.plots` prints the results table and writes `figures/input_length.pdf`, `figures/horizon_mae.pdf`.
