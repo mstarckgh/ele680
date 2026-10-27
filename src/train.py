@@ -58,6 +58,8 @@ def run(cfg, seed, data):
         val = float(((p - t) ** 2).mean())
         sched.step(val)
         log.append(dict(epoch=ep, train=tot / len(train_dl), val=val, time=time.time() - t0))
+        print(f"seed {seed} ep {ep} train {log[-1]['train']:.4f} val {val:.4f} "
+              f"{log[-1]['time']:.0f}s", flush=True)
         if val < best:
             best, bad = val, 0
             best_state = {k: v.clone() for k, v in model.state_dict().items()}
