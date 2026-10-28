@@ -36,7 +36,7 @@ def predict(model, ds, residual=False, bs=512):
     return torch.cat(out).numpy(), torch.cat(tgt).numpy()
 
 
-def run(cfg, seed, data):
+def run(cfg, seed, data, preds_path=None):
     torch.manual_seed(seed)
     np.random.seed(seed)
     L, C = cfg["L"], len(data["clients"])
@@ -83,6 +83,11 @@ def run(cfg, seed, data):
     p, t = predict(model, test_ds, residual)
     sd, mu = data["std"], data["mean"]
     p, t = p * sd + mu, t * sd + mu  # back to kW
+    if preds_path:  # test forecasts in kW + forecast start times, for src/analyze.py
+        preds_path.parent.mkdir(parents=True, exist_ok=True)
+        times = data["index"]["test"][test_ds.starts].values.astype("datetime64[ns]").astype("int64")
+        np.savez_compressed(preds_path, pred=p.astype(np.float32), true=t.astype(np.float32),
+                            times=times)
     res = evaluate(p, t)
     res.update(seed=seed, params=n_params(model), train_time=train_time, epochs=len(log),
                horizon_mae=per_horizon_mae(p, t).tolist(), log=log)
@@ -105,11 +110,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--seeds", type=int, default=5)
+    ap.add_argument("--save-preds", action="store_true",
+                    help="store test forecasts in results/preds/ for src/analyze.py")
+    ap.add_argument("--suffix", default="", help="appended to the result name (keeps old results)")
     a = ap.parse_args()
     cfg = yaml.safe_load(open(a.config))
     data = load_splits()
-    name = Path(a.config).stem
-    results = [run(cfg, s, data) for s in range(a.seeds)]
+    name = Path(a.config).stem + a.suffix
+    pp = lambda s: ROOT / "results" / "preds" / f"{name}_seed{s}.npz" if a.save_preds else None
+    results = [run(cfg, s, data, pp(s)) for s in range(a.seeds)]
     out = ROOT / "results" / f"{name}.json"
     out.write_text(json.dumps(dict(cfg=cfg, runs=results), indent=1))
     for m in ("mae", "rmse", "rse", "corr"):
