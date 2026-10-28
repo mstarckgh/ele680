@@ -10,7 +10,7 @@ import yaml
 from torch.utils.data import DataLoader
 
 from . import baselines
-from .data import WindowDataset, load_splits
+from .data import HORIZON, WindowDataset, load_splits
 from .metrics import evaluate, per_horizon_mae
 from .models import build, n_params
 
@@ -18,12 +18,20 @@ ROOT = Path(__file__).resolve().parents[1]
 DEV = "cuda" if torch.cuda.is_available() else "cpu"
 
 
+def forward(model, x, residual):
+    """Model output; with `residual` the net only learns a correction to last week's load."""
+    out = model(x)
+    if residual:
+        out = out + x[:, -168:-168 + HORIZON]  # same hours one week earlier (needs L >= 168)
+    return out
+
+
 @torch.no_grad()
-def predict(model, ds, bs=512):
+def predict(model, ds, residual=False, bs=512):
     model.eval()
     out, tgt = [], []
     for x, y in DataLoader(ds, batch_size=bs):
-        out.append(model(x.to(DEV)).cpu())
+        out.append(forward(model, x.to(DEV), residual).cpu())
         tgt.append(y)
     return torch.cat(out).numpy(), torch.cat(tgt).numpy()
 
@@ -40,7 +48,9 @@ def run(cfg, seed, data):
     model = build(cfg["model"], C, **cfg.get("model_kwargs", {})).to(DEV)
     opt = torch.optim.Adam(model.parameters(), lr=cfg.get("lr", 1e-3))
     sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, factor=0.5, patience=2)
-    loss_fn = torch.nn.MSELoss()
+    loss_fn = {"mse": torch.nn.MSELoss, "l1": torch.nn.L1Loss}[cfg.get("loss", "mse")]()
+    residual = cfg.get("residual", False)
+    assert not residual or L >= 168, "residual needs L >= 168"
     best, best_state, bad, log = 1e9, None, 0, []
     t0 = time.time()
     for ep in range(cfg.get("epochs", 40)):
@@ -49,12 +59,12 @@ def run(cfg, seed, data):
         for x, y in train_dl:
             x, y = x.to(DEV), y.to(DEV)
             opt.zero_grad()
-            loss = loss_fn(model(x), y)
+            loss = loss_fn(forward(model, x, residual), y)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.get("clip", 1.0))
             opt.step()
             tot += loss.item()
-        p, t = predict(model, val_ds)
+        p, t = predict(model, val_ds, residual)
         val = float(((p - t) ** 2).mean())
         sched.step(val)
         log.append(dict(epoch=ep, train=tot / len(train_dl), val=val, time=time.time() - t0))
@@ -70,7 +80,7 @@ def run(cfg, seed, data):
     train_time = time.time() - t0
     model.load_state_dict(best_state)
 
-    p, t = predict(model, test_ds)
+    p, t = predict(model, test_ds, residual)
     sd, mu = data["std"], data["mean"]
     p, t = p * sd + mu, t * sd + mu  # back to kW
     res = evaluate(p, t)

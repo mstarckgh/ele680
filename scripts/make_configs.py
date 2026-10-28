@@ -23,3 +23,11 @@ for m in KW:
         dump(f"len_{m}_L{L}", m, L)
 for n in (3, 4, 5, 6, 8):  # RF = 29, 61, 125, 253, 1021 (n=7 is len_tcn_L672)
     dump(f"rf_tcn_n{n}", "tcn", 672, n_blocks=n)
+
+# Why do trained models lose to "repeat last week"?  L1 loss and residual-to-naive ablations.
+for m in ("gru", "tcn"):
+    for L in (168, 672):
+        for tag, extra in (("l1", dict(loss="l1")), ("res", dict(residual=True)),
+                           ("res_l1", dict(residual=True, loss="l1"))):
+            cfg = dict(model=m, L=L, epochs=40, model_kwargs=dict(KW[m]), **extra)
+            (OUT / f"abl_{tag}_{m}_L{L}.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))

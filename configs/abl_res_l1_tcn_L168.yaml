@@ -1,0 +1,8 @@
+model: tcn
+L: 168
+epochs: 40
+model_kwargs:
+  hidden: 38
+  n_blocks: 7
+residual: true
+loss: l1
