@@ -31,3 +31,11 @@ for m in ("gru", "tcn"):
                            ("res_l1", dict(residual=True, loss="l1"))):
             cfg = dict(model=m, L=L, epochs=40, model_kwargs=dict(KW[m]), **extra)
             (OUT / f"abl_{tag}_{m}_L{L}.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))
+
+# Residual-to-naive needs L >= 168: input-length sweep (168, 672 above) and TCN receptive-field ablation.
+for m in ("gru", "tcn"):
+    cfg = dict(model=m, L=336, epochs=40, model_kwargs=dict(KW[m]), residual=True)
+    (OUT / f"abl_res_{m}_L336.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))
+for n in (3, 4, 5, 6, 8):  # n=7 is abl_res_tcn_L672
+    cfg = dict(model="tcn", L=672, epochs=40, model_kwargs={**KW["tcn"], "n_blocks": n}, residual=True)
+    (OUT / f"rfres_tcn_n{n}.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))
