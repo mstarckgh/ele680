@@ -1,0 +1,13 @@
+model                      MAE   wkday   wkend  MAE-noDST  RMSE-noDST
+abl_res_gru_L168_preds   14.49   15.08   13.00      14.46       27.88
+abl_res_tcn_L168_preds   13.97   14.51   12.61      13.93       26.53
+naive_168h               14.43   14.96   13.09      14.40       28.14
+naive_24h                14.46   14.64   14.00      14.42       30.64
+
+per-client WAPE [%] (scale-free; mean load in kW in header)
+model                   MT_156  MT_159  MT_169  MT_232  MT_242  MT_248  MT_266  MT_281  MT_302  MT_307
+mean load kW                89      44      43      82     178     155     268     111     117     767
+abl_res_gru_L168_preds    14.7    30.8     6.7     7.6     8.5     6.2     7.2     5.8     6.3     6.7
+abl_res_tcn_L168_preds    14.3    33.2     6.3     7.3     8.3     5.7     7.0     5.6     5.9     6.3
+naive_168h                14.4    30.0     6.8     7.6     8.1     6.3     7.2     5.8     6.4     6.8
+naive_24h                 24.5    48.5     5.9     6.2     6.7     5.0     6.3     4.7     5.0     6.0
