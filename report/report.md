@@ -6,7 +6,7 @@
 
 Electricity load has strong daily and weekly cycles, so a one-day-ahead forecast benefits from information up to a week or more back. Bai et al. [1] argue that generic convolutional networks (TCN) match or beat recurrent networks on sequence tasks, and Lai et al. [2] discuss why recurrent models struggle with long periodic patterns on this same dataset. We revisit that comparison on the UCI ElectricityLoadDiagrams20112014 data with a one-shot 24 h forecast, using LSTM, GRU and TCN models of matched size.
 
-Our first contribution is a negative result that shaped the rest of the work: with the standard setup, **all three networks lose to the trivial forecast "repeat last week"**. Our second contribution is a residual formulation in which the network predicts only a correction to that seasonal-naive forecast; this closes the gap and, for the TCN, beats the baseline. TODO: third contribution = hybrid model (conv + GRU with the residual), once implemented.
+Our first contribution is a negative result that shaped the rest of the work: with the standard setup, **all three networks lose to the trivial forecast "repeat last week"**. Our second contribution is a residual formulation in which the network predicts only a correction to that seasonal-naive forecast; this closes the gap. The residual TCN is better than the residual GRU in a paired comparison over test days, but its advantage over the seasonal baseline itself is small and concentrated in a few days, so we cannot claim that it beats the baseline. Third, following the suggestion of the assignment, we test a hybrid that combines convolutions and recurrence, in the spirit of LSTNet [2]; it turns out to bring no gain over a plain GRU once the residual is used.
 
 ## 2 Methods and materials
 
@@ -27,7 +27,11 @@ Our first contribution is a negative result that shaped the rest of the work: wi
 
 **Ablations.** (i) L1 instead of MSE loss; (ii) residual; (iii) residual + L1; (iv) input length L; (v) TCN receptive field (depth).
 
-TODO: description of the new model, and the paired-comparison procedure (over seeds and over test days; `src/analyze.py`).
+**Hybrid (CNN-GRU).** Inspired by the convolutional + recurrent design of LSTNet [2], but a simplified version of our own: two causal convolutions (kernel 6, 32 channels, ReLU, dropout) with a 1x1 skip from the input extract local features, which a 2-layer GRU (64 units) reads; same linear head (67,856 parameters). It is *not* LSTNet: we omit its skip-recurrent component and its autoregressive highway branch. The seasonal-naive residual plays a similar role to the highway but is a different mechanism.
+
+**Test days depend on L.** A window needs L hours of history inside its split, so a model with input length L is evaluated on forecast days starting L hours into the test split: L = 672 sees 21 fewer days than L = 168. Mean MAEs across L are therefore computed on slightly different days. The paired comparison below uses only the days common to the models compared.
+
+**Paired comparison.** For a model and a reference, the daily MAE difference (averaged over seeds) on common days, with a 95% confidence interval from a moving-block bootstrap (7-day blocks, since daily errors are autocorrelated), the share of days on which the model wins, and the range over seeds (`src/analyze.py`). TODO: results.
 
 ## 3 Results
 
@@ -59,19 +63,51 @@ Figure `figures/input_length.pdf`. Longer inputs do not help systematically: GRU
 | residual + L1 | 14.50 +- 0.20 | 13.79 +- 0.15 |
 | naive-168h | 14.43 | 14.43 |
 
-L1 loss helps the plain models slightly. The residual formulation helps far more: the GRU reaches the level of the baseline and the TCN improves on it by about 0.55 kW (4%), roughly four seed standard deviations. Adding L1 on top of the residual changes nothing. The advantage of the TCN over the GRU appears only in the residual setting. Training is also much faster with the residual (GRU: 9 epochs against 19).
+L1 loss helps the plain models slightly. The residual formulation helps far more: the GRU reaches the level of the baseline and the TCN has a lower mean MAE by about 0.55 kW (4%), several seed standard deviations, but a paired analysis over days (Section 3.6) shows that this gain over the baseline is not robust. Adding L1 on top of the residual changes nothing. The advantage of the TCN over the GRU appears only in the residual setting. Training is also much faster with the residual (GRU: 9 epochs against 19).
 
-TODO: paired test over days (TCN+res vs naive-168h), per-horizon MAE figure (`figures/horizon_mae.pdf`), per-client table; the L = 672 and L = 336 residual runs; the receptive-field ablation; the new model.
+### 3.4 Input length with the residual, and the hybrid
+
+Test MAE in kW, mean +- std over 5 seeds (figure `figures/residual_length.pdf`; naive-168h = 14.43):
+
+| model (residual) | L = 168 | L = 336 | L = 672 |
+|---|---|---|---|
+| GRU | 14.49 +- 0.13 | 14.54 +- 0.09 | 14.55 +- 0.40 |
+| TCN | 13.87 +- 0.13 | 14.20 +- 0.20 | 14.02 +- 0.20 |
+| TCN + L1 | 13.79 +- 0.15 | - | **13.52 +- 0.09** |
+| GRU + L1 | 14.50 +- 0.20 | - | 14.50 +- 0.60 |
+| CNN-GRU (hybrid) | 14.48 +- 0.09 | 14.69 +- 0.14 | 14.55 +- 0.32 |
+
+Without the residual the hybrid (L = 168) reaches 17.14 +- 0.39, second-worst after the LSTM (17.87). With the residual it is indistinguishable from the GRU at every length, and the TCN remains better. Longer inputs do not help: the residual TCN is no better at L = 336 or 672 than at L = 168, although its receptive field already covers 509 h. Only the TCN with L1 loss improves with length (13.79 to 13.52); this is a single pair of configurations and needs the paired test before being claimed. Note that the days scored differ slightly with L (Section 2).
+
+### 3.5 TCN receptive field (residual, L = 672)
+
+Figure `figures/rf_residual.pdf`. Test MAE for n = 3 ... 8 blocks (receptive field 29, 61, 125, 253, 509, 1021 h; 33k to 77k parameters): 14.47 +- 0.29, 14.38 +- 0.31, 14.37 +- 0.08, **14.00 +- 0.25**, 14.02 +- 0.20, 14.03 +- 0.27. The error is flat (about 14.4, close to naive-168h) while the receptive field is shorter than one week, drops by about 0.37 kW once it exceeds 168 h, and does not improve further. Because the hidden width is fixed, the parameter count grows with depth, so depth and capacity are confounded; however, the plateau from n = 6 to 8 occurs while the parameter count still grows by 30%, so extra capacity alone does not explain the step. We read the step as: the network needs to see at least one full week, i.e. the same hours of the previous week, to learn useful corrections to the weekly forecast, and more history than that does not help (consistent with Section 3.4).
+
+### 3.6 Paired comparison over test days
+
+The models are retrained with the same configuration while saving forecasts, so these runs can differ slightly from the tables above (e.g. TCN + L1 at L = 672: 13.68 here against 13.52; the run-to-run difference is of the order of the seed spread). diff = reference MAE minus model MAE in kW on the days both cover (positive: the model is better); CI: 95% moving-block bootstrap over days, 7-day blocks.
+
+| model | reference | days | diff | 95% CI | days model better | per-seed diff |
+|---|---|---|---|---|---|---|
+| GRU (res, L168) | naive-168h | 212 | -0.06 | [-0.26, 0.18] | 43% | -0.29 .. 0.11 |
+| TCN (res, L168) | naive-168h | 212 | 0.46 | [0.02, 1.07] | 47% | 0.28 .. 0.54 |
+| TCN (res+L1, L672) | naive-168h | 191 | 0.31 | [-0.03, 0.69] | 48% | 0.18 .. 0.48 |
+| TCN (res, L168) | GRU (res, L168) | 212 | 0.52 | [0.21, 0.94] | 58% | 0.35 .. 0.60 |
+| TCN (res+L1, L672) | GRU (res, L168) | 191 | 0.45 | [0.18, 0.75] | 60% | 0.32 .. 0.62 |
+
+The residual GRU is indistinguishable from the baseline. The residual TCN is better than the residual GRU, with a confidence interval that excludes zero, and wins on 58-60% of days. Against the baseline, however, the TCN's mean gain has an interval that barely excludes zero (L = 168) or includes it (L = 672 with L1), and the TCN is better on fewer than half of the days. The gain is concentrated: for the L = 168 TCN the median daily difference is -0.06 kW, and the mean falls from 0.46 to 0.12 kW when the ten days with the largest gains are removed. Those days are mostly in 12-21 June 2014 (e.g. 14 June: naive 30.5 kW, TCN 15.4 kW), where repeating the previous week fails; we did not investigate the cause (holidays or a one-off event are plausible). Conversely, the TCN is worse on 26 December (7.7 kW against 0.2 kW).
+
+TODO: the same for the hybrid (needs a rerun with saved forecasts), per-horizon MAE figure (`figures/horizon_mae.pdf`), per-client table.
 
 ## 4 Discussion
 
 **Why do plain networks lose?** Seasonal-naive-168h is a strong baseline for this data: load is dominated by weekly repetition. A plain network must reproduce the previous week's values from normalised inputs through a bottleneck (the last hidden state or the last TCN time step, 38-72 units) before the head, which costs accuracy on the part of the signal that is easiest to predict. Giving the weekly lag directly as a skip removes that burden. TODO: confirm with per-horizon / per-weekday error breakdown (weekend vs weekday errors are available in `results/analysis_*.txt`).
 
-**Recurrent vs. convolutional.** Without the residual we do not reproduce a clear advantage of the TCN over the GRU as claimed in [1]; we do see LSTM < GRU. With the residual the TCN is better than the GRU. A possible reading is that, once the periodic part is given, the TCN's direct access to many past time steps (fixed receptive field, no gating) is better suited to learn the remaining corrections. This is a hypothesis; the L = 672 and receptive-field experiments are meant to test it. TODO.
+**Recurrent vs. convolutional.** Without the residual we do not reproduce a clear advantage of the TCN over the GRU as claimed in [1]; we do see LSTM < GRU. With the residual the TCN is better than the GRU at every length. We first suspected that this comes from the TCN using the long window better, but the data do not support it: the residual TCN is as good at L = 168 as at L = 336 or 672, and the receptive-field runs show that what matters is covering one week (a step at about 168 h), not more. The advantage over the GRU may come from the TCN's convolutional inductive bias on the correction signal, or from its capacity; we did not run a test that separates these. The hybrid shows that adding a convolutional front-end to a GRU does not reproduce the TCN's advantage, so the gain is not simply "convolutions help".
 
-**Limitations.** 10 clients only; one chronological split; a single hyperparameter setting per model, with capacity matched by parameter count instead of tuned; the TCN gain over the baseline is small in absolute terms; client MT_159 dominates the error of the plain models. The DST days are excluded in a secondary metric only.
+**Limitations.** 10 clients only; one chronological split; a single hyperparameter setting per model, with capacity matched by parameter count instead of tuned; the TCN's gain over the baseline is small, not robust (Section 3.6) and driven by a few days in June 2014 (about 200 test days, one test period); client MT_159 dominates the error of the plain models. The DST days are excluded in a secondary metric only.
 
-TODO: new model discussion; threats to validity of the comparison with [2] (they use different clients, splits and metrics, so numbers are not comparable).
+The models see only past load, without calendar features (hour of day, weekday, holidays) or weather, which probably handicaps the plain networks; we did not test this. The training windows start at every hour while validation and test windows start at midnight, which may also cost the plain models some accuracy. The hybrid is a simplified LSTNet-style design, so our negative result does not speak against the full LSTNet. TODO: threats to validity of the comparison with [2] (they use different clients, splits and metrics, so numbers are not comparable).
 
 ## References
 
