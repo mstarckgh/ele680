@@ -86,14 +86,33 @@ def print_paired(entries, ref_name):
               f"{100 * r['better']:>12.0f}%{r['seed_min']:>8.2f}..{r['seed_max']:<5.2f}")
 
 
-def main(names, ref_name="naive_168h"):
+def horizon_mae(pred, true):
+    """MAE per forecast hour (24,), averaged over seeds, days and clients."""
+    pred = pred if pred.ndim == 4 else pred[None]
+    return np.abs(pred - true).mean(axis=(0, 1, 3))
+
+
+def plot_horizon(hz, path):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    plt.figure(figsize=(5.5, 3.5))
+    for n, h in hz.items():
+        plt.plot(range(1, 25), h, label=n.replace("_preds", "").replace("abl_", ""),
+                 ls="--" if n.startswith(("naive", "mean", "median")) else "-")
+    plt.xlabel("forecast hour"); plt.ylabel("test MAE [kW]"); plt.legend(fontsize=6)
+    plt.tight_layout(); plt.savefig(path)
+
+
+def main(names, ref_name="naive_168h", fig=None):
     data = load_splits()
     clients = data["clients"]
     ds = WindowDataset(data["test"], data["index"]["test"], 168, align_midnight=True)
     x = torch.stack([ds[i][0] for i in range(len(ds))]).numpy() * data["std"] + data["mean"]
-    rows, entries = {}, {}
+    rows, entries, hz = {}, {}, {}
     for name in names:
         pred, true, times = load_preds(name)
+        hz[name] = horizon_mae(pred, true)
         days = pd.DatetimeIndex(times)
         rows[name] = summarize(pred, true, days, clients)
         entries[name] = (day_ae(pred, true), days)
@@ -104,6 +123,7 @@ def main(names, ref_name="naive_168h"):
         pred_b = baselines.seasonal_naive(x, period)
         rows[nm] = summarize(pred_b, true, days, clients)
         entries[nm] = (day_ae(pred_b, true), days)
+        hz[nm] = horizon_mae(pred_b, true)
     # multi-week averages need 4 weeks of history, so they are scored on the (fewer) L=672 days
     ds4 = WindowDataset(data["test"], data["index"]["test"], 672, align_midnight=True)
     x4 = torch.stack([ds4[i][0] for i in range(len(ds4))]).numpy() * data["std"] + data["mean"]
@@ -113,6 +133,7 @@ def main(names, ref_name="naive_168h"):
         pred_b = baselines.seasonal_avg(x4, weeks, agg)
         rows[nm] = summarize(pred_b, true4, days4, clients)
         entries[nm] = (day_ae(pred_b, true4), days4)
+        hz[nm] = horizon_mae(pred_b, true4)
     print(f"{'model':<22}{'MAE':>8}{'wkday':>8}{'wkend':>8}{'MAE-noDST':>11}{'RMSE-noDST':>12}")
     for n, r in rows.items():
         print(f"{n:<22}{r['mae']:>8.2f}{r['mae_weekday']:>8.2f}{r['mae_weekend']:>8.2f}"
@@ -123,6 +144,8 @@ def main(names, ref_name="naive_168h"):
     for n, r in rows.items():
         print(f"{n:<22}" + "".join(f"{100 * w:>8.1f}" for w in r["wape_per_client"]))
     print_paired(entries, ref_name)
+    if fig:
+        plot_horizon({k: v for k, v in hz.items() if k != "naive_24h"}, fig)
 
 
 if __name__ == "__main__":
@@ -130,4 +153,8 @@ if __name__ == "__main__":
     ref = args[args.index("--ref") + 1] if "--ref" in args else "naive_168h"
     if "--ref" in args:
         del args[args.index("--ref"):args.index("--ref") + 2]
-    main(args or ["main_gru_preds", "main_lstm_preds", "main_tcn_preds"], ref)
+    fig = None
+    if "--fig" in args:
+        fig = args[args.index("--fig") + 1]
+        del args[args.index("--fig"):args.index("--fig") + 2]
+    main(args or ["main_gru_preds", "main_lstm_preds", "main_tcn_preds"], ref, fig)

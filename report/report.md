@@ -120,10 +120,33 @@ On the 191 days common to all models, a plain average of the same 24 hours over 
 | TCN (res+L1, L672) | mean-4w | 191 | -0.45 | [-1.04, 0.15] | 42% |
 | GRU (res, L168) | mean-4w | 191 | -0.90 | [-1.56, -0.28] | 38% |
 | median-4w | mean-4w | 191 | -0.07 | [-0.18, 0.06] | 42% |
+| TCN (res on mean-4w, L672) | mean-4w | 191 | -0.47 | [-0.83, -0.00] | 39% |
+| TCN (res on mean-4w + L1, L672) | mean-4w | 191 | -0.31 | [-0.71, 0.17] | 37% |
+| GRU (res on mean-4w, L672) | mean-4w | 191 | -0.67 | [-1.15, -0.02] | 35% |
+| TCN (res on mean-4w + L1, L672) | TCN (res on naive, L168) | 191 | 0.28 | [-0.38, 0.97] | 60% |
 
 (diff = reference MAE minus model MAE in kW, positive: the model is better.) The mean-4w forecast has MAE 13.23 kW on these days, against 13.68 for the best learned model (TCN, residual + L1, L = 672). Averaging over weeks removes the noise of one atypical week, exactly the failure mode seen in June 2014. The learned models do not beat this baseline: the TCN is not significantly different from it, the residual GRU is worse. The residual models in this report correct *last week's* value and cannot average over weeks at L = 168; the TCN at L = 672 could have learned it but did not clearly improve on it.
 
-TODO: per-horizon MAE figure (`figures/horizon_mae.pdf`), per-client table.
+To give the networks the best possible start we also trained them as corrections to the mean-4w forecast itself (`residual: mean4`, L = 672). Mean MAE on the 191 days: TCN 13.70, TCN + L1 13.54, GRU 13.90, against 13.23 for mean-4w. Paired with mean-4w, none is better (diffs -0.47, -0.31 and -0.67 kW; the interval of the L1 TCN includes zero, the others barely exclude it), and none is significantly better than the residual TCN anchored on last week (TCN + L1: 0.28 kW, CI [-0.38, 0.97]). The learned correction on top of a good baseline therefore adds error instead of removing it. A possible explanation is that the networks fit structure of the training years that does not carry over to the test period (overfitting to the training period); we did not test this, e.g. with a validation-versus-test comparison. The seed spread is also large (e.g. -1.47 to -0.03 kW for the TCN against mean-4w), so single runs are unreliable.
+
+### 3.8 Per client and per forecast hour
+
+Per-client WAPE (%, i.e. MAE divided by the client's mean load; mean load in kW in the header). Rows marked * are scored on the 191 days with 4 weeks of history, the others on 212 days.
+
+| model | MT_156 | MT_159 | MT_169 | MT_232 | MT_242 | MT_248 | MT_266 | MT_281 | MT_302 | MT_307 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| mean load [kW] | 89 | 44 | 43 | 82 | 178 | 155 | 268 | 111 | 117 | 767 |
+| naive-24h | 24.5 | 48.5 | 5.9 | **6.2** | **6.7** | **5.0** | **6.3** | **4.7** | **5.0** | **6.0** |
+| naive-168h | 14.4 | 30.0 | 6.8 | 7.6 | 8.1 | 6.3 | 7.2 | 5.8 | 6.4 | 6.8 |
+| mean-4w* | **12.0** | **26.8** | **5.8** | 6.6 | 7.9 | 5.5 | 6.7 | 5.5 | 7.0 | 6.1 |
+| GRU (res, L168) | 14.7 | 30.8 | 6.7 | 7.6 | 8.5 | 6.2 | 7.2 | 5.8 | 6.3 | 6.7 |
+| CNN-GRU (res, L168) | 14.8 | 30.6 | 6.6 | 7.5 | 8.4 | 6.3 | 7.3 | 5.7 | 6.4 | 6.7 |
+| TCN (res, L168) | 14.3 | 33.2 | 6.3 | 7.3 | 8.3 | 5.7 | 7.0 | 5.6 | 5.9 | 6.3 |
+| TCN (res+L1, L672)* | 14.3 | 28.9 | 6.2 | 7.1 | 8.2 | 5.7 | 6.9 | 5.4 | 6.1 | 6.2 |
+
+Two observations. First, the two irregular clients (MT_156, MT_159) have by far the largest relative errors for every model, and they are the clients where averaging over weeks helps most (mean-4w: 12.0 and 26.8 against 14.4 and 30.0 for naive-168h). Second, "repeat yesterday" (naive-24h) has a lower WAPE than every learned model on 8 of the 10 clients (all but MT_156 and MT_159), and the lowest of all rows on 7 of them, but is much worse on MT_156 and MT_159, so its pooled MAE ends up equal to naive-168h. All residual models are anchored to last week's load; for clients with a weak weekly cycle this anchor is worse than yesterday's load, and the networks do not fully compensate. Note also that the pooled MAE in kW weights clients by load: MT_307 alone contributes about a third of it. Per-client relative errors and pooled kW errors can therefore rank models differently.
+
+Per forecast hour (`figures/horizon_residual.pdf`; baselines mean-2w/4w and median-4w are on the 191-day set, naive-168h on the 212-day set): all models and baselines share the same shape, with errors lowest at night (forecast hours 2 to 6, about 10 kW) and peaking in the afternoon (about 16-17 kW), so the differences between models are small compared with the variation across the day. TODO: describe where the TCN gains and loses against mean-4w once the residual-on-mean runs are in.
 
 ## 4 Discussion
 
