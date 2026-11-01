@@ -50,6 +50,43 @@ def main():
             plt.plot(range(1, 25), h, label=m.upper())
     plt.xlabel("horizon [h]"); plt.ylabel("test MAE [kW]"); plt.legend(); plt.tight_layout()
     plt.savefig(fig_dir / "horizon_mae.pdf")
+    residual_figs(res, base, fig_dir)
+
+
+def residual_figs(res, base, fig_dir):
+    """Residual-to-naive models vs input length and the naive-168h line (needs L >= 168)."""
+    plt.figure(figsize=(5, 3.5))
+    for m, ls in (("gru", "--"), ("tcn", "-"), ("cnngru", ":")):
+        for tag, mk in (("res", "o"), ("res_l1", "s")):
+            pts = {int(n.split("_L")[1]): ms(r["runs"], "mae") for n, r in res.items()
+                   if n.startswith(f"abl_{tag}_{m}_L") and not n.endswith("_preds")}
+            if pts:
+                Ls = sorted(pts)
+                plt.errorbar(Ls, [pts[l][0] for l in Ls], [pts[l][1] for l in Ls], marker=mk,
+                             ls=ls, label=f"{m.upper()} {'+L1' if tag == 'res_l1' else ''}".strip())
+    if "naive_168h" in base:
+        plt.axhline(base["naive_168h"]["mae"], color="k", lw=1, label="naive-168h")
+    plt.xscale("log"); plt.xticks([168, 336, 672], ["168", "336", "672"])
+    plt.gca().xaxis.set_minor_formatter(plt.NullFormatter())
+    plt.xlabel("input length L [h]"); plt.ylabel("test MAE [kW]")
+    plt.legend(fontsize=7); plt.tight_layout(); plt.savefig(fig_dir / "residual_length.pdf")
+    # TCN receptive field (n_blocks) with the residual, L=672
+    pts = {int(n.split("_n")[1]): ms(r["runs"], "mae") for n, r in res.items()
+           if n.startswith("rfres_tcn_n")}
+    if "abl_res_tcn_L672" in res:
+        pts[7] = ms(res["abl_res_tcn_L672"]["runs"], "mae")
+    if pts:
+        plt.figure(figsize=(5, 3.5))
+        ns = sorted(pts)
+        plt.errorbar([1 + 4 * (2 ** n - 1) for n in ns], [pts[n][0] for n in ns],
+                     [pts[n][1] for n in ns], marker="o")
+        plt.axvline(672, color="gray", ls=":", label="input length")
+        if "naive_168h" in base:
+            plt.axhline(base["naive_168h"]["mae"], color="k", lw=1, label="naive-168h")
+        plt.xscale("log"); plt.xticks([29, 125, 509, 1021], ["29", "125", "509", "1021"])
+        plt.gca().xaxis.set_minor_formatter(plt.NullFormatter())
+        plt.xlabel("TCN receptive field [h]"); plt.ylabel("test MAE [kW]")
+        plt.legend(fontsize=7); plt.tight_layout(); plt.savefig(fig_dir / "rf_residual.pdf")
 
 
 if __name__ == "__main__":
