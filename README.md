@@ -1,6 +1,6 @@
 # ELE680 – 24 h-ahead electricity load forecasting: LSTM/GRU/TCN/CNN-GRU vs seasonal baselines
 
-One-shot 24 h forecast of 10 clients of UCI ElectricityLoadDiagrams20112014 (hourly mean). We compare LSTM, GRU and
+One-shot 24 h forecast of 10 clients of UCI ElectricityLoadDiagrams20112014 (hourly mean). I compare LSTM, GRU and
 TCN of matched size (Bai et al. 2018, Lai et al. 2018), a simplified CNN-GRU hybrid, a residual formulation
 (network predicts a correction to last week's load or to the four-week mean), and non-learned seasonal baselines,
 with paired day-level evaluation. The report is in `report/report.md`.
@@ -81,5 +81,5 @@ paired comparison, horizon figure · `src/plots.py` tables and figures · `scrip
 ## References
 Bai, Kolter & Koltun (2018), *An Empirical Evaluation of Generic Convolutional and Recurrent Networks for Sequence Modeling*.
 Lai et al. (2018), *Modeling Long- and Short-Term Temporal Patterns with Deep Neural Networks*, SIGIR.
-The TCN is written from scratch following the architecture in Bai et al.; the CNN-GRU is our own simplified design
+The TCN is written from scratch following the architecture in Bai et al.; the CNN-GRU is my own simplified design
 inspired by LSTNet. No external code is used.

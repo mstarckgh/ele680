@@ -4,3 +4,4 @@ results/checkpoints/
 __pycache__/
 *.pt
 logs/
+report/report.html
