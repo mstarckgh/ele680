@@ -36,3 +36,17 @@ def test_seasonal_avg_matches_naive_for_one_week_and_averages_weeks():
     w1, w2 = x[:, -168:-144], x[:, -336:-312]
     assert np.allclose(seasonal_avg(x, 2), (w1 + w2) / 2)
     assert seasonal_avg(x, 4, "median").shape == (3, 24, 2)
+
+
+def test_mean4_residual_base_matches_analysis_baseline():
+    import torch
+    from src.baselines import seasonal_avg
+    from src.train import forward
+
+    class Zero(torch.nn.Module):
+        def forward(self, x):
+            return torch.zeros(x.shape[0], 24, x.shape[2])
+
+    x = torch.randn(3, 672, 2)
+    assert np.allclose(forward(Zero(), x, "mean4").numpy(), seasonal_avg(x.numpy(), 4), atol=1e-6)
+    assert np.allclose(forward(Zero(), x, True).numpy(), x[:, -168:-144].numpy())

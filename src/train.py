@@ -18,11 +18,18 @@ ROOT = Path(__file__).resolve().parents[1]
 DEV = "cuda" if torch.cuda.is_available() else "cpu"
 
 
+def base_forecast(x, residual):
+    """Seasonal baseline the net corrects: same 24 h one week earlier (`True`, needs L >= 168) or
+    their mean over the last four weeks (`"mean4"`, needs L >= 672)."""
+    weeks = 4 if residual == "mean4" else 1
+    return torch.stack([x[:, -168 * k:-168 * k + HORIZON] for k in range(1, weeks + 1)]).mean(0)
+
+
 def forward(model, x, residual):
-    """Model output; with `residual` the net only learns a correction to last week's load."""
+    """Model output; with `residual` the net only learns a correction to the seasonal baseline."""
     out = model(x)
     if residual:
-        out = out + x[:, -168:-168 + HORIZON]  # same hours one week earlier (needs L >= 168)
+        out = out + base_forecast(x, residual)
     return out
 
 
@@ -50,7 +57,7 @@ def run(cfg, seed, data, preds_path=None):
     sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, factor=0.5, patience=2)
     loss_fn = {"mse": torch.nn.MSELoss, "l1": torch.nn.L1Loss}[cfg.get("loss", "mse")]()
     residual = cfg.get("residual", False)
-    assert not residual or L >= 168, "residual needs L >= 168"
+    assert not residual or L >= (672 if residual == "mean4" else 168), "L too short for residual base"
     best, best_state, bad, log = 1e9, None, 0, []
     t0 = time.time()
     for ep in range(cfg.get("epochs", 40)):

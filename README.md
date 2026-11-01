@@ -23,6 +23,7 @@ Chronological split 70/10/20 from 2012-01-01; z-scoring uses train statistics on
 | `len_<model>_L<L>` | input-length sweep L ∈ {24, 72, 336, 672} |
 | `rf_tcn_n<n>` | TCN depth/receptive-field ablation at L=672 (n=7 is `len_tcn_L672`) |
 | `abl_{l1,res,res_l1}_<model>_L<L>` | L1 loss / residual-to-seasonal-naive (needs L >= 168) ablations |
+| `abl_res4[_l1]_<model>_L672` | residual on the mean of the last 4 weeks (`residual: mean4`, needs L >= 672) |
 | `rfres_tcn_n<n>` | residual TCN receptive-field ablation at L=672 (n=7 is `abl_res_tcn_L672`) |
 | `main_cnngru`, `abl_res_cnngru_L<L>` | new hybrid: causal conv front-end + GRU (~68k params), plain and residual |
 
