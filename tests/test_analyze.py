@@ -26,3 +26,13 @@ def test_bootstrap_ci_covers_mean_of_noisy_diffs():
     d = rng.normal(0.4, 1.0, size=200)
     lo, hi = block_bootstrap_ci(d)
     assert lo < d.mean() < hi and hi - lo < 1.0
+
+
+def test_seasonal_avg_matches_naive_for_one_week_and_averages_weeks():
+    from src.baselines import seasonal_avg, seasonal_naive
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(3, 672, 2))
+    assert np.allclose(seasonal_avg(x, 1), seasonal_naive(x[:, -168:], 168))
+    w1, w2 = x[:, -168:-144], x[:, -336:-312]
+    assert np.allclose(seasonal_avg(x, 2), (w1 + w2) / 2)
+    assert seasonal_avg(x, 4, "median").shape == (3, 24, 2)

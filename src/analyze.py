@@ -104,6 +104,15 @@ def main(names, ref_name="naive_168h"):
         pred_b = baselines.seasonal_naive(x, period)
         rows[nm] = summarize(pred_b, true, days, clients)
         entries[nm] = (day_ae(pred_b, true), days)
+    # multi-week averages need 4 weeks of history, so they are scored on the (fewer) L=672 days
+    ds4 = WindowDataset(data["test"], data["index"]["test"], 672, align_midnight=True)
+    x4 = torch.stack([ds4[i][0] for i in range(len(ds4))]).numpy() * data["std"] + data["mean"]
+    true4 = torch.stack([ds4[i][1] for i in range(len(ds4))]).numpy() * data["std"] + data["mean"]
+    days4 = pd.DatetimeIndex(data["index"]["test"][ds4.starts])
+    for nm, weeks, agg in (("mean_2w", 2, "mean"), ("mean_4w", 4, "mean"), ("median_4w", 4, "median")):
+        pred_b = baselines.seasonal_avg(x4, weeks, agg)
+        rows[nm] = summarize(pred_b, true4, days4, clients)
+        entries[nm] = (day_ae(pred_b, true4), days4)
     print(f"{'model':<22}{'MAE':>8}{'wkday':>8}{'wkend':>8}{'MAE-noDST':>11}{'RMSE-noDST':>12}")
     for n, r in rows.items():
         print(f"{n:<22}{r['mae']:>8.2f}{r['mae_weekday']:>8.2f}{r['mae_weekend']:>8.2f}"
