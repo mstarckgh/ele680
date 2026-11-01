@@ -77,7 +77,7 @@ Test MAE in kW, mean +- std over 5 seeds (figure `figures/residual_length.pdf`; 
 | GRU + L1 | 14.50 +- 0.20 | - | 14.50 +- 0.60 |
 | CNN-GRU (hybrid) | 14.48 +- 0.09 | 14.69 +- 0.14 | 14.55 +- 0.32 |
 
-Without the residual the hybrid (L = 168) reaches 17.14 +- 0.39, second-worst after the LSTM (17.87). With the residual it is indistinguishable from the GRU at every length, and the TCN remains better. Longer inputs do not help: the residual TCN is no better at L = 336 or 672 than at L = 168, although its receptive field already covers 509 h. Only the TCN with L1 loss improves with length (13.79 to 13.52); this is a single pair of configurations and needs the paired test before being claimed. Note that the days scored differ slightly with L (Section 2).
+Without the residual the hybrid (L = 168) reaches 17.14 +- 0.39, second-worst after the LSTM (17.87). With the residual it is indistinguishable from the GRU at every length, and the TCN remains better. Longer inputs do not help: the residual TCN is no better at L = 336 or 672 than at L = 168, although its receptive field already covers 509 h. Only the TCN with L1 loss improves with length in mean MAE (13.79 to 13.52); the paired test in Section 3.6 shows that this is not a reliable effect. Note that the days scored differ slightly with L (Section 2).
 
 ### 3.5 TCN receptive field (residual, L = 672)
 
@@ -94,10 +94,20 @@ The models are retrained with the same configuration while saving forecasts, so 
 | TCN (res+L1, L672) | naive-168h | 191 | 0.31 | [-0.03, 0.69] | 48% | 0.18 .. 0.48 |
 | TCN (res, L168) | GRU (res, L168) | 212 | 0.52 | [0.21, 0.94] | 58% | 0.35 .. 0.60 |
 | TCN (res+L1, L672) | GRU (res, L168) | 191 | 0.45 | [0.18, 0.75] | 60% | 0.32 .. 0.62 |
+| CNN-GRU (res, L168) | naive-168h | 212 | -0.05 | [-0.28, 0.23] | 40% | -0.22 .. 0.05 |
+| CNN-GRU (res, L168) | GRU (res, L168) | 212 | 0.01 | [-0.14, 0.15] | 50% | -0.16 .. 0.11 |
+| CNN-GRU (res, L168) | TCN (res, L168) | 212 | -0.51 | [-0.92, -0.20] | 40% | -0.68 .. -0.41 |
+| GRU (res, L672) | naive-168h | 191 | -0.56 | [-0.94, -0.07] | 30% | -1.15 .. 0.09 |
+| GRU (res, L672) | GRU (res, L168) | 191 | -0.42 | [-0.71, -0.03] | 29% | -1.01 .. 0.23 |
+| TCN (res+L1, L672) | TCN (res, L168) | 191 | 0.14 | [-0.05, 0.30] | 52% | 0.00 .. 0.30 |
+| TCN (res, L336) | TCN (res, L168) | 205 | -0.20 | [-0.38, -0.04] | 41% | -0.48 .. -0.06 |
+| TCN (res, L336) | naive-168h | 205 | 0.28 | [-0.23, 0.78] | 48% | 0.00 .. 0.42 |
 
 The residual GRU is indistinguishable from the baseline. The residual TCN is better than the residual GRU, with a confidence interval that excludes zero, and wins on 58-60% of days. Against the baseline, however, the TCN's mean gain has an interval that barely excludes zero (L = 168) or includes it (L = 672 with L1), and the TCN is better on fewer than half of the days. The gain is concentrated: for the L = 168 TCN the median daily difference is -0.06 kW, and the mean falls from 0.46 to 0.12 kW when the ten days with the largest gains are removed. Those days are mostly in 12-21 June 2014 (e.g. 14 June: naive 30.5 kW, TCN 15.4 kW), where repeating the previous week fails; we did not investigate the cause (holidays or a one-off event are plausible). Conversely, the TCN is worse on 26 December (7.7 kW against 0.2 kW).
 
-TODO: the same for the hybrid (needs a rerun with saved forecasts), per-horizon MAE figure (`figures/horizon_mae.pdf`), per-client table.
+The hybrid is statistically identical to the GRU (diff 0.01 kW, CI [-0.14, 0.15]) and clearly worse than the TCN. A longer input does not help the GRU: on the common days, the residual GRU with L = 672 is worse than with L = 168 and worse than the baseline (the CI excludes zero; one of the five seeds is much worse). For the TCN, L = 336 is slightly worse than L = 168 (-0.20 kW, CI [-0.38, -0.04]), and the L = 672 + L1 model is not significantly better than the L = 168 model (0.14 kW, CI [-0.05, 0.30]); the latter two also differ in loss, so that comparison does not isolate the effect of L. Hence L = 168, one week of history, is the best or equal-best input length for the residual models. We therefore do not claim that a longer input or L1 loss improves the TCN, and the mean-MAE gain from 13.79 to 13.52 in Section 3.4 should not be read as an effect.
+
+TODO: per-horizon MAE figure (`figures/horizon_mae.pdf`), per-client table.
 
 ## 4 Discussion
 
