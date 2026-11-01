@@ -39,3 +39,10 @@ for m in ("gru", "tcn"):
 for n in (3, 4, 5, 6, 8):  # n=7 is abl_res_tcn_L672
     cfg = dict(model="tcn", L=672, epochs=40, model_kwargs={**KW["tcn"], "n_blocks": n}, residual=True)
     (OUT / f"rfres_tcn_n{n}.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))
+
+# New model: causal-conv front-end + GRU (LSTNet-style), same ~68k budget; plain and residual-to-naive.
+KW["cnngru"] = {"conv": 32, "hidden": 64}
+dump("main_cnngru", "cnngru", 168)
+for L in (168, 336, 672):
+    cfg = dict(model="cnngru", L=L, epochs=40, model_kwargs=dict(KW["cnngru"]), residual=True)
+    (OUT / f"abl_res_cnngru_L{L}.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))

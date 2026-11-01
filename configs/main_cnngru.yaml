@@ -1,0 +1,6 @@
+model: cnngru
+L: 168
+epochs: 40
+model_kwargs:
+  conv: 32
+  hidden: 64

@@ -22,6 +22,9 @@ Chronological split 70/10/20 from 2012-01-01; z-scoring uses train statistics on
 | `main_{lstm,gru,tcn}` | L=168, parameter-matched (~65–70k params) |
 | `len_<model>_L<L>` | input-length sweep L ∈ {24, 72, 336, 672} |
 | `rf_tcn_n<n>` | TCN depth/receptive-field ablation at L=672 (n=7 is `len_tcn_L672`) |
+| `abl_{l1,res,res_l1}_<model>_L<L>` | L1 loss / residual-to-seasonal-naive (needs L >= 168) ablations |
+| `rfres_tcn_n<n>` | residual TCN receptive-field ablation at L=672 (n=7 is `abl_res_tcn_L672`) |
+| `main_cnngru`, `abl_res_cnngru_L<L>` | new hybrid: causal conv front-end + GRU (~68k params), plain and residual |
 
 Single run: `python -m src.train --config configs/main_tcn.yaml --seeds 5` → `results/main_tcn.json`.
 
@@ -42,7 +45,7 @@ Local/sequential alternative: `scripts/run_all.sh`.
 `python -m src.plots` prints the results table and writes `figures/input_length.pdf`, `figures/horizon_mae.pdf`.
 
 ## Layout
-`src/data.py` pipeline · `src/models.py` LSTM/GRU/TCN · `src/train.py` training/eval · `src/metrics.py` MAE/RMSE/RSE/CORR · `src/baselines.py` · `tests/`
+`src/data.py` pipeline · `src/models.py` LSTM/GRU/TCN/CNN-GRU · `src/train.py` training/eval · `src/metrics.py` MAE/RMSE/RSE/CORR · `src/baselines.py` · `tests/`
 
 ## References
 Bai, Kolter & Koltun (2018), *An Empirical Evaluation of Generic Convolutional and Recurrent Networks for Sequence Modeling*.
