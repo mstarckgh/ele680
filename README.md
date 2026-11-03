@@ -83,4 +83,6 @@ paired comparison, horizon figure · `src/plots.py` tables and figures · `scrip
 ## References
 Bai, Kolter & Koltun (2018), *An Empirical Evaluation of Generic Convolutional and Recurrent Networks for Sequence Modeling*.
 Lai et al. (2018), *Modeling Long- and Short-Term Temporal Patterns with Deep Neural Networks*, SIGIR.
-The TCN is written from scratch following the architecture in Bai et al. No external code is used.
+The TCN follows the design of Bai et al. and the authors' reference implementation (https://github.com/locuslab/TCN, MIT licence).
+The code in this repository was generated with the help of an AI assistant (Claude Code).
+A line-by-line comparison with the reference file `TCN/tcn.py` found no copied code (2 of 30 normalised lines identical, both trivial).

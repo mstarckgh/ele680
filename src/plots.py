@@ -8,6 +8,18 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def naive_mae(L):
+    """MAE [kW] of naive-168h on the test days that a model with input length L covers."""
+    import torch
+    from . import baselines
+    from .data import WindowDataset, load_splits
+    d = load_splits()
+    ds = WindowDataset(d["test"], d["index"]["test"], L, align_midnight=True)
+    x = torch.stack([ds[i][0] for i in range(len(ds))]).numpy() * d["std"] + d["mean"]
+    y = torch.stack([ds[i][1] for i in range(len(ds))]).numpy() * d["std"] + d["mean"]
+    return float(np.abs(baselines.seasonal_naive(x, 168) - y).mean())
+
+
 def load():
     return {p.stem: json.loads(p.read_text()) for p in sorted((ROOT / "results").glob("*.json"))}
 
@@ -64,8 +76,8 @@ def residual_figs(res, base, fig_dir):
                 Ls = sorted(pts)
                 plt.errorbar(Ls, [pts[l][0] for l in Ls], [pts[l][1] for l in Ls], marker=mk,
                              ls=ls, label=m.upper())
-    if "naive_168h" in base:
-        plt.axhline(base["naive_168h"]["mae"], color="k", lw=1, label="naive-168h")
+    Ls = [168, 336, 672]   # naive-168h on the same test days as the models at each L
+    plt.plot(Ls, [naive_mae(L) for L in Ls], color="k", lw=1, marker="s", ms=4, label="naive-168h (same days)")
     plt.xscale("log"); plt.xticks([168, 336, 672], ["168", "336", "672"])
     plt.gca().xaxis.set_minor_formatter(plt.NullFormatter())
     plt.xlabel("input length L [h]"); plt.ylabel("test MAE [kW]")
@@ -81,8 +93,7 @@ def residual_figs(res, base, fig_dir):
         plt.errorbar([1 + 4 * (2 ** n - 1) for n in ns], [pts[n][0] for n in ns],
                      [pts[n][1] for n in ns], marker="o")
         plt.axvline(672, color="gray", ls=":", label="input length")
-        if "naive_168h" in base:
-            plt.axhline(base["naive_168h"]["mae"], color="k", lw=1, label="naive-168h")
+        plt.axhline(naive_mae(672), color="k", lw=1, label="naive-168h (same days)")
         plt.xscale("log"); plt.xticks([29, 125, 509, 1021], ["29", "125", "509", "1021"])
         plt.gca().xaxis.set_minor_formatter(plt.NullFormatter())
         plt.xlabel("TCN receptive field [h]"); plt.ylabel("test MAE [kW]")

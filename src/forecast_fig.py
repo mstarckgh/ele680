@@ -46,19 +46,19 @@ def main():
     med = np.median(err[wk], axis=0)
     i = wk[np.argmin((np.abs(err[wk] - med) / med).sum(1))]
 
-    fig, ax = plt.subplots(figsize=(5.2, 3.3))
-    ax.plot(range(24), true[i], color=INK, lw=2.2, label="actual", zorder=5)
+    fig, ax = plt.subplots(figsize=(3.6, 2.6))
+    ax.plot(range(24), true[i], color=INK, lw=1.8, label="actual", zorder=5)
     for (name, (_, colour, ls)), e in zip(MODELS.items(), err[i]):
-        ax.plot(range(24), day[name][i], color=colour, lw=1.6, ls=ls, label=f"{name} (MAE {e:.0f} kW)")
-    ax.set_xlabel("forecast hour (0 = midnight)", fontsize=8)
-    ax.set_ylabel("total load of the 10 clients [kW]", fontsize=8)
+        ax.plot(range(24), day[name][i], color=colour, lw=1.3, ls=ls, label=f"{name} (MAE {e:.0f} kW)")
+    ax.set_xlabel("forecast hour (0 = midnight)", fontsize=7)
+    ax.set_ylabel("total load of the 10 clients [kW]", fontsize=6.5)
     ax.set_xticks([0, 6, 12, 18, 23])
-    ax.set_title(f"{times[i].strftime('%A %d %B %Y')}", fontsize=8, loc="left", color=INK)
+    ax.set_title(f"{times[i].strftime('%A %d %B %Y')}", fontsize=7, loc="left", color=INK)
     ax.grid(axis="y", color=GRID, lw=0.5)
-    ax.tick_params(labelsize=7)
+    ax.tick_params(labelsize=6.5)
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
-    ax.legend(fontsize=7, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2)
+    ax.legend(fontsize=6, frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.24), ncol=2, columnspacing=1.0, handlelength=1.6)
     fig.tight_layout()
     out = ROOT / "figures"
     (out / "png").mkdir(exist_ok=True)
