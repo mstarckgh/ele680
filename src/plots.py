@@ -56,14 +56,14 @@ def main():
 def residual_figs(res, base, fig_dir):
     """Residual-to-naive models vs input length and the naive-168h line (needs L >= 168)."""
     plt.figure(figsize=(5, 3.5))
-    for m, ls in (("gru", "--"), ("tcn", "-"), ("cnngru", ":")):
-        for tag, mk in (("res", "o"), ("res_l1", "s")):
+    for m, ls in (("gru", "--"), ("tcn", "-")):
+        for tag, mk in (("res", "o"),):
             pts = {int(n.split("_L")[1]): ms(r["runs"], "mae") for n, r in res.items()
                    if n.startswith(f"abl_{tag}_{m}_L") and not n.endswith("_preds")}
             if pts:
                 Ls = sorted(pts)
                 plt.errorbar(Ls, [pts[l][0] for l in Ls], [pts[l][1] for l in Ls], marker=mk,
-                             ls=ls, label=f"{m.upper()} {'+L1' if tag == 'res_l1' else ''}".strip())
+                             ls=ls, label=m.upper())
     if "naive_168h" in base:
         plt.axhline(base["naive_168h"]["mae"], color="k", lw=1, label="naive-168h")
     plt.xscale("log"); plt.xticks([168, 336, 672], ["168", "336", "672"])

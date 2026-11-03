@@ -1,9 +1,9 @@
-# ELE680 – 24 h-ahead electricity load forecasting: LSTM/GRU/TCN/CNN-GRU vs seasonal baselines
+# ELE680 – 24 h-ahead electricity load forecasting: LSTM/GRU/TCN vs seasonal baselines
 
 One-shot 24 h forecast of 10 clients of UCI ElectricityLoadDiagrams20112014 (hourly mean). I compare LSTM, GRU and
-TCN of matched size (Bai et al. 2018, Lai et al. 2018), a simplified CNN-GRU hybrid, a residual formulation
+TCN of matched size (Bai et al. 2018, Lai et al. 2018), a residual formulation
 (network predicts a correction to last week's load or to the four-week mean), and non-learned seasonal baselines,
-with paired day-level evaluation. The report is in `report/report.md`.
+with paired day-level evaluation. The report is in `report/report.tex`.
 
 ## Setup
 ```bash
@@ -27,7 +27,7 @@ Chronological split 70/10/20 from 2012-01-01; z-scoring uses train statistics on
 | `abl_{l1,res,res_l1}_<model>_L<L>` | L1 loss / residual-to-last-week (needs L >= 168) ablations |
 | `abl_res4[_l1]_<model>_L672` | residual on the mean of the last 4 weeks (`residual: mean4`, needs L >= 672) |
 | `rfres_tcn_n<n>` | residual TCN receptive-field ablation at L=672 (n=7 is `abl_res_tcn_L672`) |
-| `main_cnngru`, `abl_res_cnngru_L<L>` | hybrid: causal conv front-end + GRU (~68k params), plain and residual |
+| `main_cnngru`, `abl_res_cnngru_L<L>` | exploratory CNN-GRU hybrid, not part of the reported results |
 
 Single run: `python -m src.train --config configs/main_tcn.yaml --seeds 5` → `results/main_tcn.json`
 (add `--save-preds [--suffix _preds]` to also store test forecasts in `results/preds/`).
@@ -47,8 +47,10 @@ Single run: `python -m src.train --config configs/main_tcn.yaml --seeds 5` → `
    under their own name) and writes `results/preds/*.npz`. The retrained runs differ from step 3 by about the seed spread.
 5. **Tables, figures, paired tests:**
 ```bash
+python -m src.overview                                # figures/data_overview.pdf (the 10 clients and the split)
+python -m src.forecast_fig                            # figures/forecast_examples.pdf (forecast vs actual, one typical weekday, four models)
 python -m src.plots                                   # mean tables, figures/{input_length,residual_length,rf_residual}.pdf
-M="abl_res_tcn_L168_preds abl_res_gru_L168_preds abl_res_cnngru_L168_preds abl_res_l1_tcn_L672_preds"
+M="abl_res_tcn_L168_preds abl_res_gru_L168_preds abl_res_l1_tcn_L672_preds"
 python -m src.analyze $M                              # MAE, per-client WAPE, paired vs naive_168h
 python -m src.analyze $M --ref abl_res_gru_L168_preds # paired vs the residual GRU
 python -m src.analyze $M --ref mean_4w                # paired vs the four-week mean
@@ -73,13 +75,12 @@ Check scripts first with `sbatch --test-only <script>`. Adjust `--time` if tasks
 10 min per seed on a P100). The array task index is the position of the config in the sorted file list.
 
 ## Layout
-`src/data.py` pipeline · `src/models.py` LSTM/GRU/TCN/CNN-GRU · `src/train.py` training/eval (residual variants) ·
+`src/data.py` pipeline · `src/models.py` LSTM/GRU/TCN · `src/train.py` training/eval (residual variants) ·
 `src/metrics.py` MAE/RMSE/RSE/CORR · `src/baselines.py` seasonal baselines · `src/analyze.py` per-client WAPE,
 paired comparison, horizon figure · `src/plots.py` tables and figures · `scripts/` run helpers · `tests/` ·
-`results/` per-config JSON, `results/preds/` test forecasts · `report/report.md` the report.
+`results/` per-config JSON, `results/preds/` test forecasts · `report/report.tex` the report.
 
 ## References
 Bai, Kolter & Koltun (2018), *An Empirical Evaluation of Generic Convolutional and Recurrent Networks for Sequence Modeling*.
 Lai et al. (2018), *Modeling Long- and Short-Term Temporal Patterns with Deep Neural Networks*, SIGIR.
-The TCN is written from scratch following the architecture in Bai et al.; the CNN-GRU is my own simplified design
-inspired by LSTNet. No external code is used.
+The TCN is written from scratch following the architecture in Bai et al. No external code is used.
