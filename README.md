@@ -61,19 +61,6 @@ python -m src.analyze $M --fig figures/horizon_residual.pdf   # per-forecast-hou
    Paired differences use only the days both models cover (a window needs L hours of history inside the test split,
    so L=672 models are scored on 191 days and L=168 models on 212); intervals are 7-day moving-block bootstrap.
 
-### UiS GPU cluster with Slurm (follows https://gitlab.ux.uis.no/unix/gpu)
-```bash
-ssh $USER@gorina11.ux.uis.no
-cd /bhome/$USER && git clone <this repo> ele680 && cd ele680
-./scripts/download_data.sh                    # on the login node; GPU jobs need files under /bhome
-mkdir -p logs
-sbatch scripts/slurm_setup.sbatch             # conda env, no GPU; wait for it to finish
-sbatch scripts/slurm_baselines.sbatch         # cheap, CPU only
-sbatch --array=0-$(( $(ls configs/*.yaml | wc -l) - 1 )) scripts/slurm_array.sbatch   # one task per config
-```
-Check scripts first with `sbatch --test-only <script>`. Adjust `--time` if tasks time out (a TCN at L=672 needs about
-10 min per seed on a P100). The array task index is the position of the config in the sorted file list.
-
 ## Layout
 `src/data.py` pipeline · `src/models.py` LSTM/GRU/TCN · `src/train.py` training/eval (residual variants) ·
 `src/metrics.py` MAE/RMSE/RSE/CORR · `src/baselines.py` seasonal baselines · `src/analyze.py` per-client WAPE,
