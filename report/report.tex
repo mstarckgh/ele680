@@ -19,7 +19,8 @@
 \renewcommand{\arraystretch}{1.05}
 
 \title{24-hour-ahead electricity load forecasting: recurrent vs.\ convolutional networks and the role of seasonal baselines}
-\author{Matthias Starck}   % add names
+\author{Matthias Starck\\
+\href{https://github.com/mstarckgh/ele680}{github.com/mstarckgh/ele680}}
 \date{\today}
 
 \begin{document}
@@ -53,7 +54,7 @@ My contributions, in the order the work developed, are as follows.
     \item GRU with 2 layers $\times$ 72 units (67,200 parameters)
     \item TCN with 7 residual blocks of two weight-normalised causal dilated convolutions, kernel 3, dilations $1,2,\dots,64$ and 38 channels ($68,298$ parameters, receptive field $1+4(2^n-1)=509$~h)
 \end{itemize}
-The models are implemented in PyTorch and follow \cite{bai}. The TCN block follows the authors' reference implementation (github.com/locuslab/TCN). The code was generated with the help of an AI assistant (Claude) and is not a copy of it. I compared the two and found no copied code. I trained them with Adam (learning rate $10^{-3}$), a batch size of 64, mean squared error (MSE) on normalised data, gradient clipping at 1.0, dropout 0.1, at most 40 epochs and early stopping with patience 6. Every configuration is trained with five different seeds. I also tried L1 loss (the mean absolute error as training objective) for the GRU and TCN. At $L=168$ it changed the mean MAE by 0.4~kW or less. At $L=672$ the residual TCN with L1 loss had a lower mean MAE than with MSE (13.52 against 14.02~kW). I ran no paired test, so I draw no conclusions. All tables use MSE.
+The models are implemented in PyTorch and follow \cite{bai}. I trained them with Adam (learning rate $10^{-3}$), a batch size of 64, mean squared error (MSE) on normalised data, gradient clipping at 1.0, dropout 0.1, at most 40 epochs and early stopping with patience 6. Every configuration is trained with five different seeds. I also tried L1 loss (the mean absolute error as training objective) for the GRU and TCN. At $L=168$ it changed the mean MAE by 0.4~kW or less. At $L=672$ the residual TCN with L1 loss had a lower mean MAE than with MSE (13.52 against 14.02~kW). I ran no paired test, so I draw no conclusions. All tables use MSE.
 
 \textbf{Residual variants.} The network output is added to a seasonal forecast from the input window. The network therefore only learns a correction. The forecast is either the same 24 hours one week earlier (needs $L\ge168$) or their mean over the last four weeks (\texttt{residual: mean4}, needs $L\ge672$). There is no residual version of the LSTM. It was the weaker of the two recurrent networks, so I ran the residual variants only for the GRU and the TCN.
 
@@ -191,7 +192,7 @@ Two clients, MT\_156 and MT\_159, are hard to forecast for every method. Their r
 
 {\small
 \begin{thebibliography}{3}
-\bibitem{bai} S. Bai, J. Z. Kolter, and V. Koltun, ``An empirical evaluation of generic convolutional and recurrent networks for sequence modeling,'' arXiv:1803.01271, 2018. Reference code: \url{https://github.com/locuslab/TCN}.
+\bibitem{bai} S. Bai, J. Z. Kolter, and V. Koltun, ``An empirical evaluation of generic convolutional and recurrent networks for sequence modeling,'' arXiv:1803.01271, 2018.
 \bibitem{lai} G. Lai, W.-C. Chang, Y. Yang, and H. Liu, ``Modeling long- and short-term temporal patterns with deep neural networks,'' in \emph{Proc.\ 41st Int.\ ACM SIGIR Conf.\ Research and Development in Information Retrieval}, 2018.
 \bibitem{uci} A. Trindade, ``ElectricityLoadDiagrams20112014,'' UCI Machine Learning Repository, 2015. [Online]. Available: \url{https://doi.org/10.24432/C58C86}
 \end{thebibliography}}
